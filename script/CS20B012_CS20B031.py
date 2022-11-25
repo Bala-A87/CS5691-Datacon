@@ -1,3 +1,5 @@
+# TODO: Try One-Hot Encoding, perform precomputation after train_test_split
+
 # Import required libraries
 
 import pandas as pd
