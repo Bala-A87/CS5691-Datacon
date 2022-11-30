@@ -4,7 +4,7 @@
 
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor
 
 # Define some constants
 
@@ -15,8 +15,9 @@ HD = "hotels_data"
 PD = "payments_data"
 SS = "sample_submission_5"
 TD = "train_data"
-
 base_path = r"../data/"
+max_iters = [100, 200, 500, 1000, 5000]
+max_depths = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
 # Define helper functions
 
@@ -197,19 +198,21 @@ test_data = pd.merge(left=test_data, right=booking_expiry, how='left', on='booki
 test_data.drop(labels=['booking_create_timestamp', 'booking_expiry_date'], axis=1, inplace=True)
 
 train_labels = train_data_full['rating_score']
-train_data_full.drop(labels=['rating_score', 'booking_id', 'customer_id'], axis=1, inplace=True)
+train_data_full.drop(labels=['rating_score', 'booking_id', 'customer_id', 'unique_id_num', 'hotel_id'], axis=1, inplace=True)
 train_data_full.fillna(-1, inplace=True)
 
 test_ids = test_data['booking_id']
-test_data.drop(labels=['booking_id', 'customer_id'], axis=1, inplace=True)
+test_data.drop(labels=['booking_id', 'customer_id', 'unique_id_num', 'hotel_id'], axis=1, inplace=True)
 test_data.fillna(-1, inplace=True)
 
 # Fit train data and predict on test data
 
-rfrgr = RandomForestRegressor(n_estimators=1000, max_features=0.5)
-rfrgr.fit(train_data_full, train_labels)
-test_pred = trim_pred(np.reshape(rfrgr.predict(test_data), test_ids.shape))
-test_pred = pd.DataFrame(data=test_pred, columns=['rating_score'])
-test_sub = pd.concat([test_ids, test_pred], axis=1)
+models = np.ndarray.flatten(np.array(list(np.array(list(HistGradientBoostingRegressor(max_iter=max_iter, max_depth=max_depth, random_state=14) for max_depth in max_depths)) for max_iter in max_iters)))
+for model in models:
+    model.fit(train_data_full, train_labels)
+sub_preds = np.mean(np.array(list(model.predict(test_data) for model in models)), axis=0)
+sub_preds = trim_pred(sub_preds)
+test_preds = pd.DataFrame(data=sub_preds, columns=['rating_score'])
+test_sub = pd.concat([test_ids, test_preds], axis=1)
 
 test_sub.to_csv("../output/CS20B012_CS20B031.csv", index=False)
