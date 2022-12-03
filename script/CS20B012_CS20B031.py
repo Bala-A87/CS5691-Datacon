@@ -1,5 +1,3 @@
-# TODO: Try One-Hot Encoding, perform precomputation after train_test_split
-
 # Import required libraries
 
 import pandas as pd
@@ -110,13 +108,19 @@ for i in range(bookings.shape[0]):
     customer_id = bookings.at[i, 'customer_id']
     booking_status_num = status_hash[bookings.at[i, 'booking_status']]
     create_date = bookings.at[i, 'booking_create_timestamp']
+    create_month = create_date.month
+    create_year = create_date.year
     approved_date = bookings.at[i, 'booking_approved_at']
     checkin_date = bookings.at[i, 'booking_checkin_customer_date']
+    checkin_month = checkin_date.month
+    checkin_year = checkin_date.year
+    is_checkin = 0 if pd.isnull(checkin_date) else 1
     approval_time = (approved_date-create_date).total_seconds()/60
-    checkin_time = (checkin_date-create_date).total_seconds()/1440
-    bookings_modified.append([booking_id, customer_id, booking_status_num, create_date, approval_time, checkin_time])
+    quick_approve = 1 if approval_time < 1440 else 0
+    checkin_time = (checkin_date-create_date).total_seconds()/86400
+    bookings_modified.append([booking_id, customer_id, booking_status_num, create_date, create_month, create_year, approval_time, quick_approve, checkin_time, checkin_month, checkin_year, is_checkin])
 bookings_modified = pd.DataFrame(data=bookings_modified, columns=[
-    'booking_id', 'customer_id', 'booking_status_num', 'booking_create_timestamp', 'booking_approval_time', 'booking_checkin_time'])
+    'booking_id', 'customer_id', 'booking_status_num', 'booking_create_timestamp', 'create_month', 'create_year',  'booking_approval_time', 'quick_approve', 'booking_checkin_time', 'checkin_month', 'checkin_year', 'is_checkin'])
 bookings_modified.fillna(-1, inplace=True)
 
 unique_ids = bookings_data['booking_id'].unique()
@@ -165,7 +169,7 @@ for i in range(train_data_full.shape[0]):
     booking_id = train_data_full.at[i, 'booking_id']
     expiry_date = train_data_full.at[i, 'booking_expiry_date']
     create_date = train_data_full.at[i, 'booking_create_timestamp']
-    expiry_time = (expiry_date-create_date).total_seconds()/1440
+    expiry_time = (expiry_date-create_date).total_seconds()/86400
     expiry_times[id_hash[booking_id]] = expiry_time
 for booking_id in unique_ids:
     expiry_time = expiry_times[id_hash[booking_id]]
@@ -188,7 +192,7 @@ for i in range(test_data.shape[0]):
     booking_id = test_data.at[i, 'booking_id']
     expiry_date = test_data.at[i, 'booking_expiry_date']
     create_date = test_data.at[i, 'booking_create_timestamp']
-    expiry_time = (expiry_date-create_date).total_seconds()/1440
+    expiry_time = (expiry_date-create_date).total_seconds()/86400
     expiry_times[id_hash[booking_id]] = expiry_time
 for booking_id in unique_ids:
     expiry_time = expiry_times[id_hash[booking_id]]
@@ -198,11 +202,11 @@ test_data = pd.merge(left=test_data, right=booking_expiry, how='left', on='booki
 test_data.drop(labels=['booking_create_timestamp', 'booking_expiry_date'], axis=1, inplace=True)
 
 train_labels = train_data_full['rating_score']
-train_data_full.drop(labels=['rating_score', 'booking_id', 'customer_id', 'unique_id_num', 'hotel_id'], axis=1, inplace=True)
+train_data_full.drop(labels=['rating_score', 'booking_id', 'customer_id'], axis=1, inplace=True)
 train_data_full.fillna(-1, inplace=True)
 
 test_ids = test_data['booking_id']
-test_data.drop(labels=['booking_id', 'customer_id', 'unique_id_num', 'hotel_id'], axis=1, inplace=True)
+test_data.drop(labels=['booking_id', 'customer_id'], axis=1, inplace=True)
 test_data.fillna(-1, inplace=True)
 
 # Fit train data and predict on test data
