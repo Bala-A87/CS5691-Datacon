@@ -219,4 +219,4 @@ sub_preds = trim_pred(sub_preds)
 test_preds = pd.DataFrame(data=sub_preds, columns=['rating_score'])
 test_sub = pd.concat([test_ids, test_preds], axis=1)
 
-test_sub.to_csv("../output/CS20B012_CS20B031.csv", index=False)
+test_sub.to_csv("../output/preds.csv", index=False)
